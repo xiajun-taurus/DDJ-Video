@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.xiajun.mapper.UsersMapper" >
+
+  
+  <update id="addReceiveLikeCount" parameterType="string">
+  	update users set receive_like_counts=receive_like_counts+1 where id=#{userId}
+  </update>
+  
+  <update id="reduceReceiveLikeCount" parameterType="string">
+  	update users set receive_like_counts=receive_like_counts-1 where id=#{userId}
+  </update>
+  
+  
+  
+  
+  <update id="addFansCount" parameterType="string">
+  	update users set fans_counts=fans_counts+1 where id=#{userId}
+  </update>
+  
+  <update id="reduceFansCount" parameterType="string">
+  	update users set fans_counts=fans_counts-1 where id=#{userId}
+  </update>
+  
+  <update id="addFollersCount" parameterType="string">
+  	update users set follow_counts=follow_counts+1 where id=#{userId}
+  </update>
+  
+  <update id="reduceFollersCount" parameterType="string">
+  	update users set follow_counts=follow_counts-1 where id=#{userId}
+  </update>
+  
+</mapper>
