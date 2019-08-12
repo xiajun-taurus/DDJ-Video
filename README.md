@@ -10,3 +10,8 @@
 
 ddj-video-api模块下的com.xiajun包内的`Application.java`
 
+
+
+## 数据库
+
+数据库文件放在根目录'SQL'文件夹内，执行即可。
