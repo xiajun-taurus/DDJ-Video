@@ -47,6 +47,19 @@ public class FFMpeg {
         excuteCommand(command);
     }
 
+    public static void getImgCover(String videoInputPath, String coverOutputPath) throws IOException {
+        ArrayList<String> command = new ArrayList<>();
+        command.add("ffmpeg");
+        command.add("-i");
+        command.add(videoInputPath);
+        command.add("-ss");
+        command.add("1");
+        command.add("-f");
+        command.add("image2");
+        command.add(coverOutputPath);
+        excuteCommand(command);
+    }
+
     public static void main(String[] args) {
         try {
             convertor("/Users/xiajun/Desktop/1548333491664623.mp4", "/Users/xiajun/Desktop/out1.avi");

@@ -10,12 +10,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>ddj-video-service</artifactId>
-<dependencies>
-    <dependency>
-        <groupId>com.xiajun</groupId>
-        <artifactId>ddj-video-mapper</artifactId>
-        <version>1.0-SNAPSHOT</version>
-    </dependency>
-</dependencies>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.xiajun</groupId>
+            <artifactId>ddj-video-mapper</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
 
 </project>

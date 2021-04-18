@@ -1,6 +1,7 @@
 package com.xiajun.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.xiajun.enums.ThumbnailTypeEnum;
 import com.xiajun.enums.VideoStatusEnum;
 import com.xiajun.pojo.Bgm;
 import com.xiajun.pojo.Comments;
@@ -12,9 +13,11 @@ import com.xiajun.service.impl.VideosServiceImpl;
 import com.xiajun.utils.FFMpeg;
 import com.xiajun.utils.JSONResult;
 import io.swagger.annotations.*;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,6 +39,7 @@ import java.util.UUID;
  * @since 2019-05-20
  */
 @RestController
+@Slf4j
 @Api(value = "视频相关业务接口", tags = {"视频相关业务controller"})
 @RequestMapping("video")
 public class VideoController extends BasicController {
@@ -43,6 +47,9 @@ public class VideoController extends BasicController {
     private BgmServiceImpl bgmService;
     @Autowired
     private VideosServiceImpl videosService;
+
+    @Value("${thumbnailType}")
+    private String thumbnailType;
 
     @ApiOperation(value = "用户上传视频", notes = "用户上传视频接口")
     @ApiImplicitParams({
@@ -70,8 +77,14 @@ public class VideoController extends BasicController {
         // 文件保存的命名空间
 //		String fileSpace = "C:/imooc_videos_dev";
         // 保存到数据库中的相对路径
-        String uploadPathDB = "/" + userId + "/video";
-        String coverPathDB = "/" + userId + "/video";
+        String uploadPath = new StringBuilder()
+                .append(File.separator)
+                .append(userId)
+                .append(File.separator)
+                .append("video")
+                .toString();
+        // 封面与视频在同一个目录
+        String coverPath = uploadPath;
 
         FileOutputStream fileOutputStream = null;
         InputStream inputStream = null;
@@ -81,23 +94,23 @@ public class VideoController extends BasicController {
             if (file != null) {
 
                 String fileName = file.getOriginalFilename();
-                // abc.mp4
+                // abc.mp4，去掉微信小程序上传产生的..标示
                 String arrayFilenameItem[] =  fileName.split("\\.");
                 String fileNamePrefix = "";
                 for (int i = 0 ; i < arrayFilenameItem.length-1 ; i ++) {
                     fileNamePrefix += arrayFilenameItem[i];
                 }
-                // fix bug: 解决小程序端OK，PC端不OK的bug，原因：PC端和小程序端对临时视频的命名不同
-//				String fileNamePrefix = fileName.split("\\.")[0];
 
                 if (StringUtils.isNotBlank(fileName)) {
 
-                    finalVideoPath = FILE_SPACE + uploadPathDB + "/" + fileName;
+                    finalVideoPath = FILE_SPACE + uploadPath + File.separator + fileName;
                     // 设置数据库保存的路径
-                    uploadPathDB += ("/" + fileName);
-                    coverPathDB = coverPathDB + "/" + fileNamePrefix + ".gif";
+                    uploadPath += (File.separator + fileName);
+
+                    coverPath = coverPath + File.separator + fileNamePrefix + ThumbnailTypeEnum.getExtensionNameByType(thumbnailType);
 
                     File outFile = new File(finalVideoPath);
+                    // 若目录不存在创建目录
                     if (outFile.getParentFile() != null || !outFile.getParentFile().isDirectory()) {
                         // 创建父文件夹
                         outFile.getParentFile().mkdirs();
@@ -112,7 +125,7 @@ public class VideoController extends BasicController {
                 return JSONResult.errorMsg("上传出错...");
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("上传出错...{}", e.getMessage());
             return JSONResult.errorMsg("上传出错...");
         } finally {
             if (fileOutputStream != null) {
@@ -130,17 +143,29 @@ public class VideoController extends BasicController {
             String videoInputPath = finalVideoPath;
 
             String videoOutputName = UUID.randomUUID().toString() + ".mp4";
-            uploadPathDB = "/" + userId + "/video" + "/" + videoOutputName;
-            finalVideoPath = FILE_SPACE + uploadPathDB;
+            uploadPath = File.separator
+                    + userId
+                    + File.separator
+                    + "video"
+                    + File.separator
+                    + videoOutputName;
+            finalVideoPath = FILE_SPACE + uploadPath;
             FFMpeg.mergeVideoAndBgm(videoInputPath, mp3InputPath, videoSeconds, finalVideoPath);
         }
-        System.out.println("uploadPathDB=" + uploadPathDB);
+        System.out.println("uploadPathDB=" + uploadPath);
         System.out.println("finalVideoPath=" + finalVideoPath);
 
         // 对视频进行截图
-        FFMpeg.getGIFCover(finalVideoPath, FILE_SPACE + coverPathDB);
+        if (ThumbnailTypeEnum.GIF.getType().equals(thumbnailType)) {
+            FFMpeg.getGIFCover(finalVideoPath, FILE_SPACE + coverPath);
+        } else if (ThumbnailTypeEnum.JPEG.getType().equals(thumbnailType)) {
+            FFMpeg.getImgCover(finalVideoPath, FILE_SPACE + coverPath);
+        } else {
+            log.error("错误的封面类型:{0}", thumbnailType);
+            return JSONResult.errorMsg("错误的封面类型...");
+        }
 
-
+        // 数据入库
         Videos video = new Videos();
         video.setAudioId(bgmId)
                 .setUserId(userId)
@@ -148,8 +173,8 @@ public class VideoController extends BasicController {
                 .setVideoHeight(videoHeight)
                 .setVideoWidth(videoWidth)
                 .setVideoDesc(desc)
-                .setVideoPath(uploadPathDB)
-                .setCoverPath(coverPathDB)
+                .setVideoPath(uploadPath)
+                .setCoverPath(coverPath)
                 .setStatus(VideoStatusEnum.SUCCESS.value)
                 .setCreateTime(LocalDateTime.now());
         videosService.save(video);
@@ -157,59 +182,6 @@ public class VideoController extends BasicController {
         return JSONResult.ok(video.getId());
     }
 
-
-//    @ApiOperation(value = "用户上传视频封面", notes = "用户上传视频封面接口")
-//    @ApiImplicitParams({
-//            @ApiImplicitParam(name = "userId", value = "用户id", required = true,
-//                    dataType = "String", paramType = "form"),
-//            @ApiImplicitParam(name = "videoId", value = "视频主键id", required = true,
-//                    dataType = "String", paramType = "form")
-//    })
-//    @PostMapping(value = "/uploadCover", headers = "content-type=multipart/form-data")
-//    public JSONResult upload(String userId, String videoId, @ApiParam(value = "短视频封面", required = true) MultipartFile file) throws Exception {
-//        if (StringUtils.isBlank(videoId) || StringUtils.isBlank(userId)) {
-//            return JSONResult.errorMsg("视频主键id和用户id不能为空");
-//        }
-//
-//        //保存到数据库中的相对路径
-//        String uploadPathDB = "/" + userId + "/video";
-//
-//        FileOutputStream fileOutputStream = null;
-//        InputStream inputStream = null;
-//        String finalCoverPath = null;
-//        try {
-//            if (file != null) {
-//                String filename = file.getOriginalFilename();
-//                if (StringUtils.isNotBlank(filename)) {
-//                    //文件上传的最终保存路径--绝对路径
-//                    finalCoverPath = FILE_SPACE + "/" + uploadPathDB + "/" + filename;
-//                    uploadPathDB += ("/" + filename);
-//                    File outFile = new File(finalCoverPath);
-//                    if (outFile.getParentFile() != null || !outFile.getParentFile().isDirectory()) {
-//                        //创建父文件夹
-//                        outFile.getParentFile().mkdirs();
-//                    }
-//                    fileOutputStream = new FileOutputStream(outFile);
-//                    inputStream = file.getInputStream();
-//                    IOUtils.copy(inputStream, fileOutputStream);
-//                } else {
-//                    return JSONResult.errorMsg("上传出错");
-//                }
-//            }
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//            return JSONResult.errorMsg("上传出错");
-//        } finally {
-//            if (fileOutputStream != null) {
-//                fileOutputStream.flush();
-//                fileOutputStream.close();
-//            }
-//        }
-//        VideosVO video = new VideosVO();
-//        video.setId(videoId).setCoverPath(uploadPathDB);
-//        videosService.updateById(video);
-//        return JSONResult.ok();
-//    }
     /**
      *
      * @Description: 分页和搜索查询视频列表
