@@ -1,4 +1,4 @@
-package com.xiajun;
+package com.xiajun.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
