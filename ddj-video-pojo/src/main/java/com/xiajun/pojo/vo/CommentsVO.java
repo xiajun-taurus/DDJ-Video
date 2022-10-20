@@ -28,7 +28,7 @@ public class CommentsVO implements Serializable {
 
 private static final long serialVersionUID=1L;
 
-    @TableId(value = "id", type = IdType.UUID)
+    @TableId(value = "id", type = IdType.ASSIGN_UUID)
     private String id;
 
     @TableField("father_comment_id")
