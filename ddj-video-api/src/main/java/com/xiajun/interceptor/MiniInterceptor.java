@@ -3,6 +3,7 @@ package com.xiajun.interceptor;
 import com.xiajun.utils.JSONResult;
 import com.xiajun.utils.JsonUtils;
 import com.xiajun.utils.RedisOperator;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -14,6 +15,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 
+@Slf4j
 public class MiniInterceptor implements HandlerInterceptor {
 
 	@Autowired
@@ -30,20 +32,22 @@ public class MiniInterceptor implements HandlerInterceptor {
 		String userToken = request.getHeader("headerUserToken");
 		
 		if (StringUtils.isNotBlank(userId) && StringUtils.isNotBlank(userToken)) {
+			// 根据userid从redis取对应token
 			String uniqueToken = redis.get(USER_REDIS_SESSION + ":" + userId);
-			if (StringUtils.isEmpty(uniqueToken) && StringUtils.isBlank(uniqueToken)) {
-				System.out.println("请登录...");
+			// token为空为未登录状态
+			if (StringUtils.isBlank(uniqueToken)) {
+				log.warn("请登录...");
 				returnErrorResponse(response, JSONResult.errorTokenMsg("请登录..."));
 				return false;
 			} else {
 				if (!uniqueToken.equals(userToken)) {
-					System.out.println("账号被挤出...");
+					log.warn("账号被挤出...");
 					returnErrorResponse(response, JSONResult.errorTokenMsg("账号被挤出..."));
 					return false;
 				}
 			}
 		} else {
-			System.out.println("请登录...");
+			log.warn("请登录...");
 			returnErrorResponse(response, JSONResult.errorTokenMsg("请登录..."));
 			return false;
 		}
