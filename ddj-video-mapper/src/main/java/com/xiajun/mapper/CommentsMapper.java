@@ -17,5 +17,5 @@ import java.util.List;
  * @since 2019-05-25
  */
 public interface CommentsMapper extends BaseMapper<Comments> {
-    public List<CommentsVO> queryComments(Page<CommentsVO> page,@Param("videoId") String videoId);
+    List<CommentsVO> queryComments(Page<CommentsVO> page,@Param("videoId") String videoId);
 }

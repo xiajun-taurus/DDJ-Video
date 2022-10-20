@@ -14,5 +14,5 @@ import java.util.List;
  * @since 2019-05-25
  */
 public interface SearchRecordsMapper extends BaseMapper<SearchRecords> {
-    public List<String> getHotwords();
+    List<String> getHotWords();
 }

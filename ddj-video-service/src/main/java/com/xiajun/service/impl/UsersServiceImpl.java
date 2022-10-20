@@ -1,17 +1,20 @@
 package com.xiajun.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.xiajun.mapper.UsersFansMapper;
-import com.xiajun.mapper.UsersLikeVideosMapper;
 import com.xiajun.mapper.UsersMapper;
-import com.xiajun.mapper.UsersReportMapper;
 import com.xiajun.pojo.Users;
 import com.xiajun.pojo.UsersFans;
 import com.xiajun.pojo.UsersLikeVideos;
 import com.xiajun.pojo.UsersReport;
+import com.xiajun.service.IUsersFansService;
+import com.xiajun.service.IUsersLikeVideosService;
+import com.xiajun.service.IUsersReportService;
 import com.xiajun.service.IUsersService;
 import com.xiajun.utils.MD5Utils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -21,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * <p>
@@ -33,28 +37,26 @@ import java.util.List;
 @Service
 public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements IUsersService {
     @Autowired
-    private UsersMapper usersMapper;
+    private IUsersLikeVideosService usersLikeVideosService;
     @Autowired
-    private UsersLikeVideosMapper usersLikeVideosMapper;
+    private IUsersFansService usersFansService;
     @Autowired
-    private UsersFansMapper usersFansMapper;
-    @Autowired
-    private UsersReportMapper usersReportMapper;
+    private IUsersReportService usersReportService;
 
     @Transactional(propagation = Propagation.SUPPORTS)
     @Override
     public boolean queryUserIsExist(String username) {
-        QueryWrapper<Users> wrapper = new QueryWrapper<>();
-        wrapper.eq("username", username);
-        return usersMapper.selectOne(wrapper) != null;
+        final LambdaQueryWrapper<Users> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Users::getUsername, username);
+        return Optional.ofNullable(getOne(wrapper)).isPresent();
     }
 
     @Override
     public Users queryUserForLogin(String username, String password) throws Exception {
-        QueryWrapper<Users> wrapper = new QueryWrapper<>();
-        wrapper.eq("username", username)
-                .eq("password", MD5Utils.getMD5Str(password));
-        return usersMapper.selectOne(wrapper);
+        final LambdaQueryWrapper<Users> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Users::getUsername, username)
+                .eq(Users::getPassword, MD5Utils.getMD5Str(password));
+        return getOne(wrapper);
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
@@ -75,15 +77,11 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
         if (StringUtils.isBlank(userId) || StringUtils.isBlank(videoId)) {
             return false;
         }
-
-        QueryWrapper<UsersLikeVideos> wrapper = new QueryWrapper<>();
-        wrapper.eq("user_id", userId).eq("video_id", videoId);
-        List<UsersLikeVideos> list = usersLikeVideosMapper.selectList(wrapper);
-        if (list != null && list.size() > 0) {
-            return true;
-        }
-
-        return false;
+        final LambdaQueryWrapper<UsersLikeVideos> wrapper = Wrappers.lambdaQuery();
+        wrapper.eq(UsersLikeVideos::getUserId, userId)
+                .eq(UsersLikeVideos::getVideoId, videoId);
+        List<UsersLikeVideos> list = usersLikeVideosService.list(wrapper);
+        return CollectionUtils.isNotEmpty(list);
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
@@ -93,34 +91,31 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
         userFan.setUserId(userId);
         userFan.setFanId(fanId);
 
-        usersFansMapper.insert(userFan);
+        usersFansService.save(userFan);
 
-        usersMapper.addFansCount(userId);
-        usersMapper.addFollersCount(fanId);
+        this.getBaseMapper().addFansCount(userId);
+        this.getBaseMapper().addFollersCount(fanId);
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
     @Override
     public void deleteUserFanRelation(String userId, String fanId) {
-        QueryWrapper<UsersFans> wrapper = new QueryWrapper<>();
-        wrapper.eq("user_id", userId).eq("fan_id", fanId);
+        final LambdaUpdateWrapper<UsersFans> wrapper = Wrappers.lambdaUpdate();
+        wrapper.eq(UsersFans::getUserId, userId)
+                .eq(UsersFans::getFanId, fanId);
         //删除关系
-        usersFansMapper.delete(wrapper);
-        usersMapper.reduceFansCount(userId);
-        usersMapper.reduceFollersCount(fanId);
+        usersFansService.remove(wrapper);
+        this.getBaseMapper().reduceFansCount(userId);
+        this.getBaseMapper().reduceFollersCount(fanId);
 
     }
 
     @Override
     public boolean queryIfFollow(String userId, String fanId) {
-        QueryWrapper<UsersFans> wrapper = new QueryWrapper<>();
-        wrapper.eq("user_id", userId).eq("fan_id", fanId);
-        List<UsersFans> list = usersFansMapper.selectList(wrapper);
-
-        if (list != null && !list.isEmpty() && list.size() > 0) {
-            return true;
-        }
-        return false;
+        final LambdaQueryWrapper<UsersFans> wrapper = Wrappers.lambdaQuery();
+        wrapper.eq(UsersFans::getUserId, userId).eq(UsersFans::getFanId, fanId);
+        List<UsersFans> list = usersFansService.list(wrapper);
+        return CollectionUtils.isNotEmpty(list);
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
@@ -128,6 +123,6 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
     public void reportUser(UsersReport userReport) {
 
         userReport.setCreateDate(LocalDateTime.now());
-        usersReportMapper.insert(userReport);
+        usersReportService.save(userReport);
     }
 }

@@ -1,9 +1,10 @@
 package com.xiajun.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.xiajun.mapper.*;
+import com.xiajun.mapper.VideosMapper;
 import com.xiajun.pojo.Comments;
 import com.xiajun.pojo.SearchRecords;
 import com.xiajun.pojo.UsersLikeVideos;
@@ -31,15 +32,15 @@ import java.util.List;
 @Service
 public class VideosServiceImpl extends ServiceImpl<VideosMapper, Videos> implements IVideosService {
     @Autowired
-    private SearchRecordsMapper searchRecordsMapper;
+    private SearchRecordsServiceImpl searchRecordsService;
     @Autowired
-    private VideosMapper videosMapper;
+    private VideosServiceImpl videosService;
     @Autowired
-    private UsersLikeVideosMapper usersLikeVideosMapper;
+    private UsersLikeVideosServiceImpl usersLikeVideosService;
     @Autowired
-    private UsersMapper usersMapper;
+    private UsersServiceImpl usersService;
     @Autowired
-    private CommentsMapper commentsMapper;
+    private CommentsServiceImpl commentsService;
 
     @Transactional(propagation = Propagation.REQUIRED)
     @Override
@@ -64,11 +65,11 @@ public class VideosServiceImpl extends ServiceImpl<VideosMapper, Videos> impleme
         if (isSaveRecord != null && isSaveRecord == 1) {
             SearchRecords record = new SearchRecords();
             record.setContent(desc);
-            searchRecordsMapper.insert(record);
+            searchRecordsService.save(record);
         }
         Page<VideosVO> videosVOPage = new Page<>();
         videosVOPage.setCurrent(page).setSize(pageSize);
-        List<VideosVO> list = videosMapper.queryAllVideos(videosVOPage, desc, userId);
+        List<VideosVO> list = videosService.getBaseMapper().queryAllVideos(videosVOPage, desc, userId);
 
         videosVOPage.setRecords(list);
 
@@ -80,7 +81,7 @@ public class VideosServiceImpl extends ServiceImpl<VideosMapper, Videos> impleme
     public Page<VideosVO> queryMyLikeVideos(String userId, Integer page, Integer pageSize) {
         Page<VideosVO> videosVOPage = new Page<>();
         videosVOPage.setCurrent(page).setSize(pageSize);
-        List<VideosVO> list = videosMapper.queryMyLikeVideos(userId);
+        List<VideosVO> list = videosService.getBaseMapper().queryMyLikeVideos(userId);
         videosVOPage.setRecords(list);
 
         return videosVOPage;
@@ -92,7 +93,7 @@ public class VideosServiceImpl extends ServiceImpl<VideosMapper, Videos> impleme
         Page<VideosVO> videosVOPage = new Page<>();
         videosVOPage.setCurrent(page).setSize(pageSize);
 
-        List<VideosVO> list = videosMapper.queryMyFollowVideos(userId);
+        List<VideosVO> list = videosService.getBaseMapper().queryMyFollowVideos(userId);
 
         videosVOPage.setRecords(list);
         return videosVOPage;
@@ -101,7 +102,7 @@ public class VideosServiceImpl extends ServiceImpl<VideosMapper, Videos> impleme
     @Transactional(propagation = Propagation.SUPPORTS)
     @Override
     public List<String> getHotwords() {
-        return searchRecordsMapper.getHotwords();
+        return searchRecordsService.getBaseMapper().getHotWords();
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
@@ -112,31 +113,32 @@ public class VideosServiceImpl extends ServiceImpl<VideosMapper, Videos> impleme
 
         ulv.setUserId(userId);
         ulv.setVideoId(videoId);
-        usersLikeVideosMapper.insert(ulv);
+        usersLikeVideosService.save(ulv);
 
         // 2. 视频喜欢数量累加
-        videosMapper.addVideoLikeCount(videoId);
+        this.getBaseMapper().addVideoLikeCount(videoId);
 
         // 3. 用户受喜欢数量的累加
-        usersMapper.addReceiveLikeCount(videoCreaterId);
+        usersService.getBaseMapper().addReceiveLikeCount(videoCreaterId);
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
     @Override
     public void userUnLikeVideo(String userId, String videoId, String videoCreaterId) {
         // 1. 删除用户和视频的喜欢点赞关联关系表
-        QueryWrapper<UsersLikeVideos> wrapper = new QueryWrapper<>();
+        final LambdaUpdateWrapper<UsersLikeVideos> wrapper = Wrappers.lambdaUpdate();
 
-        wrapper.eq("user_id", userId).eq("video_id", videoId);
+        wrapper.eq(UsersLikeVideos::getUserId, userId)
+                .eq(UsersLikeVideos::getVideoId, videoId);
 
 
-        usersLikeVideosMapper.delete(wrapper);
+        usersLikeVideosService.remove(wrapper);
 
         // 2. 视频喜欢数量累减
-        videosMapper.reduceVideoLikeCount(videoId);
+        this.getBaseMapper().reduceVideoLikeCount(videoId);
 
         // 3. 用户受喜欢数量的累减
-        usersMapper.reduceReceiveLikeCount(videoCreaterId);
+        usersService.getBaseMapper().reduceReceiveLikeCount(videoCreaterId);
 
     }
 
@@ -145,7 +147,7 @@ public class VideosServiceImpl extends ServiceImpl<VideosMapper, Videos> impleme
     public void saveComment(Comments comment) {
 
         comment.setCreateTime(LocalDateTime.now());
-        commentsMapper.insert(comment);
+        commentsService.save(comment);
     }
 
     @Transactional(propagation = Propagation.SUPPORTS)
@@ -157,7 +159,7 @@ public class VideosServiceImpl extends ServiceImpl<VideosMapper, Videos> impleme
         commentsVOPage.setCurrent(page);
         commentsVOPage.setSize(pageSize);
 
-        List<CommentsVO> list = commentsMapper.queryComments(commentsVOPage,videoId);
+        List<CommentsVO> list = commentsService.getBaseMapper().queryComments(commentsVOPage, videoId);
 
         for (CommentsVO c : list) {
             String timeAgo = TimeAgoUtils.format(c.getCreateTime());
