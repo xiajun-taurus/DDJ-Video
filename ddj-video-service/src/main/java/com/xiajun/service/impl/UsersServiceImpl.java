@@ -14,7 +14,7 @@ import com.xiajun.service.IUsersLikeVideosService;
 import com.xiajun.service.IUsersReportService;
 import com.xiajun.service.IUsersService;
 import com.xiajun.utils.MD5Utils;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

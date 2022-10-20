@@ -34,8 +34,6 @@ public class VideosServiceImpl extends ServiceImpl<VideosMapper, Videos> impleme
     @Autowired
     private SearchRecordsServiceImpl searchRecordsService;
     @Autowired
-    private VideosServiceImpl videosService;
-    @Autowired
     private UsersLikeVideosServiceImpl usersLikeVideosService;
     @Autowired
     private UsersServiceImpl usersService;
@@ -69,7 +67,7 @@ public class VideosServiceImpl extends ServiceImpl<VideosMapper, Videos> impleme
         }
         Page<VideosVO> videosVOPage = new Page<>();
         videosVOPage.setCurrent(page).setSize(pageSize);
-        List<VideosVO> list = videosService.getBaseMapper().queryAllVideos(videosVOPage, desc, userId);
+        List<VideosVO> list = this.getBaseMapper().queryAllVideos(videosVOPage, desc, userId);
 
         videosVOPage.setRecords(list);
 
@@ -81,7 +79,7 @@ public class VideosServiceImpl extends ServiceImpl<VideosMapper, Videos> impleme
     public Page<VideosVO> queryMyLikeVideos(String userId, Integer page, Integer pageSize) {
         Page<VideosVO> videosVOPage = new Page<>();
         videosVOPage.setCurrent(page).setSize(pageSize);
-        List<VideosVO> list = videosService.getBaseMapper().queryMyLikeVideos(userId);
+        List<VideosVO> list = this.getBaseMapper().queryMyLikeVideos(userId);
         videosVOPage.setRecords(list);
 
         return videosVOPage;
@@ -93,7 +91,7 @@ public class VideosServiceImpl extends ServiceImpl<VideosMapper, Videos> impleme
         Page<VideosVO> videosVOPage = new Page<>();
         videosVOPage.setCurrent(page).setSize(pageSize);
 
-        List<VideosVO> list = videosService.getBaseMapper().queryMyFollowVideos(userId);
+        List<VideosVO> list = this.getBaseMapper().queryMyFollowVideos(userId);
 
         videosVOPage.setRecords(list);
         return videosVOPage;

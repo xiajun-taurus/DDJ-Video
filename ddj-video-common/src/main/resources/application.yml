@@ -1,0 +1,63 @@
+server:
+  port: 8081
+
+spring:
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+  # redis配置
+  redis:
+    database: 1
+    host: localhost
+    port: 6379
+    jedis:
+      pool:
+        # 连接池最大连接数（使用负值表示没有限制）
+        max-active: 1000
+        # 连接池最大阻塞等待时间（使用负值表示没有限制）
+        max-wait: -1
+        # 连接池中的最大空闲连接
+        max-idle: 10
+        # 连接池中的最小空闲连接
+        min-idle: 2
+    timeout: 0
+    password:
+  # 数据库配置
+  datasource:
+    type: com.zaxxer.hikari.HikariDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/douyin?useUnicode=true&characterEncoding=utf-8&useSSL=false
+    username: root
+    password: 123456
+  # Hikari 连接池配置
+  # 最小空闲连接数量
+  hikari:
+    minimum-idle: 5
+    # 空闲连接存活最大时间，默认600000（10分钟）
+    idle-timeout: 180000
+    # 连接池最大连接数，默认是10
+    maximum-pool-size: 10
+    # 此属性控制从池返回的连接的默认自动提交行为,默认值：true
+    auto-commit: true
+    # 连接池名称
+    pool-name: MyHikariCP
+    # 此属性控制池中连接的最长生命周期，值0表示无限生命周期，默认1800000即30分钟
+    max-lifetime: 1800000
+    # 数据库连接超时时间,默认30秒，即30000
+    connection-timeout: 30000
+    connection-test-query: SELECT 1
+
+
+mybatis-plus:
+  type-aliases-package: com.xiajun.pojo
+  mapper-locations: classpath:mapper/*.xml
+
+############################################################
+# 业务配置
+############################################################
+# 文件存放路径（绝对路径）
+fileSpace: /Users/xiajun/Desktop
+# 视频封面格式 1：gif 2：jpeg
+thumbnailType: 2
+
+
