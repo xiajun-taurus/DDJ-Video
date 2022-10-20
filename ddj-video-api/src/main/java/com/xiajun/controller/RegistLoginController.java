@@ -80,11 +80,11 @@ public class RegistLoginController extends BasicController {
     }
 
     @ApiOperation(value = "用户注销", notes = "用户注销接口")
-    @ApiImplicitParam(name = "userId",value = "用户id",required = true,
-    dataType = "String",paramType = "query")
+    @ApiImplicitParam(name = "userId", value = "用户id", required = true,
+            dataType = "String", paramType = "query", dataTypeClass = String.class)
     @PostMapping("/logout")
     public JSONResult login(String userId) throws Exception {
-        redisOperator.del(USER_REDIS_SESSION+":"+userId);
+        redisOperator.del(USER_REDIS_SESSION + ":" + userId);
         return JSONResult.ok();
     }
 
